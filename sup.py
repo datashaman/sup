@@ -4,6 +4,7 @@ import parsedatetime
 import re
 import os
 import sys
+import yaml
 
 from datetime import datetime
 from github import Github
@@ -12,17 +13,29 @@ from pytz import timezone
 from dotenv import load_dotenv
 load_dotenv()
 
+APP_NAME = 'sup'
+
+DEFAULT_CONFIG = {
+    'github': {
+        'dir': '_posts',
+    },
+
+    'timezone': 'UTC',
+}
+
+CONFIG = {}
+
 cal = parsedatetime.Calendar()
 
-def create_post(entry, tz):
+def create_post(entry):
     pattern = re.compile(r'^((?P<date>[^:]*):\s+)?\s*(?P<body>.*)$', re.MULTILINE)
     match = pattern.match(entry)
     metadata = match.groupdict()
 
     if metadata['date']:
-        metadata['date'], _ = cal.parseDT(datetimeString=metadata['date'], tzinfo=timezone(tz))
+        metadata['date'], _ = cal.parseDT(datetimeString=metadata['date'], tzinfo=timezone(CONFIG['timezone']))
     else:
-        metadata['date'] = datetime.now(tz=timezone(tz))
+        metadata['date'] = datetime.now(tz=timezone(CONFIG['timezone']))
 
     categories = re.findall(r'@([^@\s]+)\b', metadata['body'])
     if categories:
@@ -37,31 +50,27 @@ def create_post(entry, tz):
     return frontmatter.Post(content, **metadata)
 
 @click.command()
-@click.option('--branch', help='Branch where post content is created')
-@click.option('--posts', default='_posts', help='Folder where post content is created')
-@click.option('--repo', help='GitHub content repository')
-@click.option('--token', help='GitHub personal access token')
-@click.option('--tz', default='UTC', help='TZ database time zone')
 @click.argument('entry', nargs=-1)
-def cli(branch, posts, repo, token, tz, entry):
+def cli(entry):
     if not entry:
         click.echo('sup', err=True)
         sys.exit(1)
 
-    post = create_post(' '.join(entry), tz)
+    post = create_post(' '.join(entry))
 
-    github = Github(token)
-    repo = github.get_user().get_repo(repo)
+    github = Github(CONFIG['github']['token'])
+    repo = github.get_user().get_repo(CONFIG['github']['repo'])
 
+    dir = CONFIG['github'].get('dir', '_posts')
     filename = post['date'].strftime('%Y-%m-%d-%H%M%S')
-    path = f'{posts}/{filename}.md'
+    path = f'{dir}/{filename}.md'
     message = 'sup'
     content = frontmatter.dumps(post)
 
     params = {}
 
-    if branch:
-        params['branch'] = branch
+    if CONFIG['github'].get('branch'):
+        params['branch'] = CONFIG['github']['branch']
 
     response = repo.create_file(
         path,
@@ -73,6 +82,14 @@ def cli(branch, posts, repo, token, tz, entry):
     click.echo(response['content'].html_url)
 
 def main():
+    global CONFIG
+
+    CONFIG.update(DEFAULT_CONFIG)
+
+    with open(os.path.join(click.get_app_dir(APP_NAME), 'config.yml')) as f:
+        config = yaml.load(f, Loader=yaml.SafeLoader)
+        CONFIG.update(config)
+
     cli(auto_envvar_prefix='SUP')
 
 if __name__ == '__main__':
