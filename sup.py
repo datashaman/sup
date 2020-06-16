@@ -16,6 +16,10 @@ load_dotenv()
 APP_NAME = 'sup'
 
 DEFAULT_CONFIG = {
+    'frontmatter': {
+        'layout': 'post',
+    },
+
     'github': {
         'dir': '_posts',
     },
