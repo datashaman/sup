@@ -23,8 +23,6 @@ DEFAULT_CONFIG = {
     'github': {
         'dir': '_posts',
     },
-
-    'timezone': 'UTC',
 }
 
 CONFIG = {}
@@ -40,9 +38,9 @@ def create_post(entry):
     metadata.update(match.groupdict())
 
     if metadata['date']:
-        metadata['date'], _ = cal.parseDT(datetimeString=metadata['date'], tzinfo=timezone(CONFIG['timezone']))
+        metadata['date'], _ = cal.parseDT(datetimeString=metadata['date'], tzinfo=timezone('UTC'))
     else:
-        metadata['date'] = datetime.now(tz=timezone(CONFIG['timezone']))
+        metadata['date'] = datetime.now(tz=timezone('UTC'))
 
     categories = re.findall(r'@([^@\s]+)\b', metadata['body'])
     if categories:
