@@ -30,7 +30,10 @@ cal = parsedatetime.Calendar()
 def create_post(entry):
     pattern = re.compile(r'^((?P<date>[^:]*):\s+)?\s*(?P<body>.*)$', re.MULTILINE)
     match = pattern.match(entry)
-    metadata = match.groupdict()
+
+    metadata = {}
+    metadata.update(CONFIG.get('frontmatter', {}))
+    metadata.update(match.groupdict())
 
     if metadata['date']:
         metadata['date'], _ = cal.parseDT(datetimeString=metadata['date'], tzinfo=timezone(CONFIG['timezone']))
