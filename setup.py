@@ -11,6 +11,8 @@ setup(
         'python-dotenv',
         'python-frontmatter',
         'pytz',
+        'pyunfurl',
+        'urlextract',
     ],
     entry_points='''
         [console_scripts]

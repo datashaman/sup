@@ -3,12 +3,14 @@ import frontmatter
 import parsedatetime
 import re
 import os
+import pyunfurl
 import sys
 import yaml
 
 from datetime import datetime
 from github import Github
 from pytz import timezone
+from urlextract import URLExtract
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -23,11 +25,16 @@ DEFAULT_CONFIG = {
     'github': {
         'dir': '_posts',
     },
+
+    'references': True,
 }
 
 CONFIG = {}
 
 cal = parsedatetime.Calendar()
+
+extractor = URLExtract()
+extractor.update()
 
 def create_post(entry):
     pattern = re.compile(r'((?P<date>[^:]*):\s+)?\s*(?P<body>.*)', re.MULTILINE | re.DOTALL)
@@ -51,6 +58,11 @@ def create_post(entry):
 
     content = metadata['body'].strip()
     del metadata['body']
+
+    if CONFIG.get('references'):
+        metadata['references'] = []
+        for url in extractor.gen_urls(content):
+            metadata['references'].append(pyunfurl.unfurl(url))
 
     return frontmatter.Post(content, **metadata)
 
