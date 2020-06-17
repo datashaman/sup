@@ -30,8 +30,8 @@ CONFIG = {}
 cal = parsedatetime.Calendar()
 
 def create_post(entry):
-    pattern = re.compile(r'^((?P<date>[^:]*):\s+)?\s*(?P<body>.*)$', re.MULTILINE)
-    match = pattern.match(entry)
+    pattern = re.compile(r'((?P<date>[^:]*):\s+)?\s*(?P<body>.*)', re.MULTILINE | re.DOTALL)
+    match = pattern.search(entry)
 
     metadata = {}
     metadata.update(CONFIG.get('frontmatter', {}))
@@ -63,11 +63,9 @@ def cli(entry):
 
     post = create_post(' '.join(entry))
 
-    github = Github(CONFIG['github']['token'])
-    repo = github.get_user().get_repo(CONFIG['github']['repo'])
-
     dir = CONFIG['github'].get('dir', '_posts')
     filename = post['date'].strftime('%Y-%m-%d-%H%M%S')
+    post['date'] = post['date'].strftime('%Y-%m-%d %H:%M:%S')
     path = f'{dir}/{filename}.md'
     message = 'sup'
     content = frontmatter.dumps(post)
@@ -76,6 +74,9 @@ def cli(entry):
 
     if CONFIG['github'].get('branch'):
         params['branch'] = CONFIG['github']['branch']
+
+    github = Github(CONFIG['github']['token'])
+    repo = github.get_user().get_repo(CONFIG['github']['repo'])
 
     response = repo.create_file(
         path,
